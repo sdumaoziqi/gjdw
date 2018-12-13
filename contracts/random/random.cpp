@@ -1,5 +1,6 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.hpp>
+#include <string>
 
 using namespace eosio;
 
@@ -196,7 +197,21 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
         }
     }
 
+uint64_t HASH_STRING_PIECE(std::string string_piece) {                 
+    uint64_t result = 0;                                                        
+    for (auto it = string_piece.cbegin(); it != string_piece.cend(); ++it) {  
+        result = (result * 131) + *it;                                       
+    }                                                                         
+    return result;
+}
 
+    // @abi action
+    void testhash(const std::string value)
+    {
+        uint64_t  n = HASH_STRING_PIECE(value);
+        eosio:print("result: ", n);
+        return;
+    }
 };
 
-EOSIO_ABI(random, (pushhash)(pushvalue))
+EOSIO_ABI(random, (pushhash)(pushvalue)(testhash))
