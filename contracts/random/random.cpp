@@ -32,7 +32,7 @@ class random : public eosio::contract
     // @abi action
     void pushhash(account_name producer, const uint64_t term, const uint64_t hash)
     {
-        require_auth(producer); //TODO:认证是否在生产者列表内
+        //require_auth(producer); //TODO:认证是否在生产者列表内
         hash_info cur_hash_info;
         cur_hash_info.producer = producer;
         cur_hash_info.hash = hash;
@@ -66,6 +66,8 @@ class random : public eosio::contract
         }
         eosio::print("pushhash#", term, " success" );
     }
+
+
 
 
 };
