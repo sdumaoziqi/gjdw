@@ -3,6 +3,8 @@
 
 using namespace eosio;
 
+#define PRODUCER_NUM 3
+
 class random : public eosio::contract
 {
     public :
@@ -42,34 +44,81 @@ class random : public eosio::contract
         auto random_term = randoms.find(term);  //找到该轮次
 
         if(random_term == randoms.end()) {
+            
+            std::vector<hash_info> producers_hash;
+            producers_hash.push_back(cur_hash_info);
+
             randoms.emplace(producer, [&](auto &new_term) {
                 new_term.term = term;
                 new_term.hash_count = 1;
-                std::vector<hash_info> producers_hash;
-                producers_hash.push_back(cur_hash_info);
                 new_term.producers_hash = producers_hash;
             });
         } else {
             std::vector<hash_info> producers_hash = random_term->producers_hash;
-            for( const auto& ph : producers_hash) {
+            //for( const auto& ph : producers_hash) {
+            for(size_t i = 0; i < producers_hash.size(); ++i) {
+                hash_info& ph = producers_hash[i];
                 if(ph.producer == producer) {
-                    eosio::print("you have push hash ", ph.hash, ", can not push change");
+                    eosio::print("you have push hash ", ph.hash, ", can not change");
                     return;
                 }
             }
             producers_hash.push_back(cur_hash_info);
-            randoms.modify(random_term, 0, [&](auto &new_term) {
+            randoms.modify(random_term, producer, [&](auto &new_term) { //这里的payer不能是0,不然会有错3090004
                 
                 new_term.hash_count += 1;
                 new_term.producers_hash = producers_hash;
             });
         }
-        eosio::print("pushhash#", term, " success" );
+        eosio::print("pushhash #", term, " success" );
     }
 
+    // @abi action
+    void pushvalue(account_name producer, const uint64_t term, const uint64_t value)
+    {
+        //require_auth(producer); //TODO:认证是否在生产者列表内
+        random_table randoms(_self, _self);
+        auto random_term = randoms.find(term);  //找到该轮次
+        if(random_term == randoms.end()) {
+            eosio::print("term #", term, " not start yet");
+            return;
+        } else {
+            if(random_term->hash_count < PRODUCER_NUM) {
+                eosio::print("there are some hash have not pushed, please wait");
+                return;
+            }
 
+            std::vector<hash_info> producers_hash = random_term->producers_hash;
+            //for( auto& ph : producers_hash) {
+            for(size_t i = 0; i < producers_hash.size(); ++i) {
+                hash_info& ph = producers_hash[i];
+                if(ph.producer == producer) {
+                    if(ph.flag == 2) {
+                        eosio::print("you have push value ", ph.value, ", can not change");
+                        
+                    } else if(ph.flag == 1) {
+                        ph.value = value;
+                        ph.flag = 2;
+                        eosio::print("success set value ", ph.value);
+                        
+                    } else {
+                        eosio::print("you must push hash before push value");
+                        
+                    }
+
+                    randoms.modify(random_term, producer, [&](auto &new_term) {
+                        new_term.producers_hash = producers_hash;
+                    });
+
+                    return;
+                }
+            }
+            eosio::print("you have to push term #", term, " hash before push value");
+            return;
+        }
+    }
 
 
 };
 
-EOSIO_ABI(random, (pushhash))
+EOSIO_ABI(random, (pushhash)(pushvalue))
