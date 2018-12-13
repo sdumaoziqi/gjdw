@@ -3,12 +3,46 @@
 
 using namespace eosio;
 
-#define PRODUCER_NUM 3
+
 
 class random : public eosio::contract
 {
     public :
         using eosio::contract::contract;
+
+//********************************
+    char char_to_symbol( char c ) {
+      if( c >= 'a' && c <= 'z' )
+         return (c - 'a') + 6;
+      if( c >= '1' && c <= '5' )
+         return (c - '1') + 1;
+      return 0;
+   }
+   uint64_t string_to_name( const char* str ) {
+      uint32_t len = 0;
+      while( str[len] ) ++len;
+      uint64_t value = 0;
+      for( uint32_t i = 0; i <= 12; ++i ) {
+         uint64_t c = 0;
+         if( i < len && i <= 12 ) c = uint64_t(char_to_symbol( str[i] ));
+         if( i < 12 ) {
+            c &= 0x1f;
+            c <<= 64-5*(i+1);
+         }
+         else {
+            c &= 0x0f;
+         }
+         value |= c;
+      }
+      return value;
+   }
+   #define N(X) ::eosio::string_to_name(#X)
+
+//********************************
+
+#define PRODUCER_NUM 3
+std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(useraaaaaaac)};
+
 
         struct hash_info
         {
@@ -32,11 +66,24 @@ class random : public eosio::contract
 
     typedef eosio::multi_index<N(randoms), random_info> random_table;
 
+    bool is_producer(account_name producer) {
+        for(auto i = 0; i < producers.size(); ++i) {
+            if(producer == producers.at(i))
+                return true;
+        }
+        return false;
+    }
+
+
     // @abi action
     void pushhash(account_name producer, const uint64_t term, const uint64_t hash)
     {
-        //require_auth(producer); //TODO:认证是否在生产者列表内
+        require_auth(producer); //TODO:认证是否在生产者列表内
         hash_info cur_hash_info;
+        if(!is_producer(producer)) {
+            eosio::print("you are not producer");
+            return;
+        }
         cur_hash_info.producer = producer;
         cur_hash_info.hash = hash;
         cur_hash_info.flag = 1;
@@ -62,7 +109,7 @@ class random : public eosio::contract
             std::vector<hash_info> producers_hash = random_term->producers_hash;
             //for( const auto& ph : producers_hash) {
             for(size_t i = 0; i < producers_hash.size(); ++i) {
-                hash_info& ph = producers_hash[i];
+                hash_info& ph = producers_hash.at(i);
                 if(ph.producer == producer) {
                     eosio::print("you have push hash ", ph.hash, ", can not change");
                     return;
@@ -88,7 +135,7 @@ class random : public eosio::contract
     // @abi action
     void pushvalue(account_name producer, const uint64_t term, const uint64_t value)
     {
-        //require_auth(producer); //TODO:认证是否在生产者列表内
+        require_auth(producer); //TODO:认证是否在生产者列表内
         random_table randoms(_self, _self);
         auto random_term = randoms.find(term);  //找到该轮次
         if(random_term == randoms.end()) {
@@ -105,9 +152,9 @@ class random : public eosio::contract
             for(size_t i = 0; i < producers_hash.size(); ++i) {
                 bool valid_value = false;
 
-                hash_info& ph = producers_hash[i];
+                hash_info& ph = producers_hash.at(i);
                 if(ph.producer == producer) {
-                    
+
                     switch( ph.flag ) {
                         case 0 : { // 未提交hash
                             eosio::print("you must push hash before push value");
