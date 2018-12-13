@@ -54,6 +54,10 @@ class random : public eosio::contract
                 new_term.producers_hash = producers_hash;
             });
         } else {
+            if(random_term->hash_count == PRODUCER_NUM) { //判断是否是多余提交，加入检测是否是bp的功能后不再需要
+                eosio::print("need not more hash");
+                return;
+            }
             std::vector<hash_info> producers_hash = random_term->producers_hash;
             //for( const auto& ph : producers_hash) {
             for(size_t i = 0; i < producers_hash.size(); ++i) {
@@ -72,6 +76,13 @@ class random : public eosio::contract
         }
         eosio::print("pushhash #", term, " success" );
     }
+
+    bool check_value(uint64_t value, uint64_t hash) {
+        if(value == hash + 1)
+            return true;
+        return false;
+    }
+
 
     // @abi action
     void pushvalue(account_name producer, const uint64_t term, const uint64_t value)
@@ -93,17 +104,20 @@ class random : public eosio::contract
             for(size_t i = 0; i < producers_hash.size(); ++i) {
                 hash_info& ph = producers_hash[i];
                 if(ph.producer == producer) {
-                    if(ph.flag == 2) {
+                    if(ph.flag == 2) {  //已提交了value
                         eosio::print("you have push value ", ph.value, ", can not change");
-                        
-                    } else if(ph.flag == 1) {
-                        ph.value = value;
-                        ph.flag = 2;
-                        eosio::print("success set value ", ph.value);
-                        
-                    } else {
+                    } else if(ph.flag == 1) {  //提交了hash, 但还没有提交value
+                        if( check_value(value, ph.hash) ) {
+                            ph.value = value;
+                            ph.flag = 2;
+                            eosio::print("success set value ", ph.value);
+                        } else {
+                            eosio::print("please push right value");
+                        }
+                    } else if(ph.flag == 0) {  // 未提交hash
                         eosio::print("you must push hash before push value");
-                        
+                    } else {
+                        eosio::print("unknow status");
                     }
 
                     randoms.modify(random_term, producer, [&](auto &new_term) {
