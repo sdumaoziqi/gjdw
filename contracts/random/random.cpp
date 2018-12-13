@@ -24,9 +24,10 @@ class random : public eosio::contract
             uint64_t term;
             std::vector<hash_info> producers_hash;
             uint64_t hash_count = 0;
+            uint64_t value_count = 0;
             
             uint64_t primary_key() const { return term; }
-            EOSLIB_SERIALIZE( random_info, (term)(producers_hash)(hash_count) )
+            EOSLIB_SERIALIZE( random_info, (term)(producers_hash)(hash_count)(value_count) )
         };
 
     typedef eosio::multi_index<N(randoms), random_info> random_table;
@@ -102,26 +103,42 @@ class random : public eosio::contract
             std::vector<hash_info> producers_hash = random_term->producers_hash;
             //for( auto& ph : producers_hash) {
             for(size_t i = 0; i < producers_hash.size(); ++i) {
+                bool valid_value = false;
+
                 hash_info& ph = producers_hash[i];
                 if(ph.producer == producer) {
-                    if(ph.flag == 2) {  //已提交了value
-                        eosio::print("you have push value ", ph.value, ", can not change");
-                    } else if(ph.flag == 1) {  //提交了hash, 但还没有提交value
-                        if( check_value(value, ph.hash) ) {
-                            ph.value = value;
-                            ph.flag = 2;
-                            eosio::print("success set value ", ph.value);
-                        } else {
-                            eosio::print("please push right value");
+                    
+                    switch( ph.flag ) {
+                        case 0 : { // 未提交hash
+                            eosio::print("you must push hash before push value");
+                            return;
                         }
-                    } else if(ph.flag == 0) {  // 未提交hash
-                        eosio::print("you must push hash before push value");
-                    } else {
-                        eosio::print("unknow status");
+                        break;
+                        case 1 : { //提交了hash, 但还没有提交value
+                            if( check_value(value, ph.hash) ) {
+                                ph.value = value;
+                                ph.flag = 2;
+                                valid_value = true;
+                                eosio::print("success set value ", ph.value);
+                            } else {
+                                eosio::print("please push right value");
+                            }
+                        }
+                        break;
+                        case 2 : { //已提交了value
+                            eosio::print("you have push value ", ph.value, ", can not change");
+                            return;
+                        }
+                        break;
+                        default :
+                            eosio::print("unknow status");
+                            return;
+                        break;
                     }
 
                     randoms.modify(random_term, producer, [&](auto &new_term) {
                         new_term.producers_hash = producers_hash;
+                        new_term.value_count += (valid_value ? 1 : 0);
                     });
 
                     return;
