@@ -2,7 +2,7 @@
 #include <string>
 
 std::string HASH_STRING_PIECE(std::string string_piece) {
-    int64_t result = 0;
+    uint64_t result = 0;
     for (auto it = string_piece.cbegin(); it != string_piece.cend(); ++it) {  
         result = (result * 131) + *it;
     }                                                                         

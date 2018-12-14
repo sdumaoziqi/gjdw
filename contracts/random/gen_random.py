@@ -52,6 +52,8 @@ def sleep(t):
     print('resume')
 
 def setContract():
+    run('g++ -o gen_hash gen_hash.cpp')
+    sleep(1)
     run(args.cleos + 'system newaccount --transfer useraaaaaaaa zmaozmaozmao GOC8ZjbDEi872aLpuuAjnd76NYW6KzPaf6RBSuwXcHmKm7A1sxayV --stake-net "200.0000 GOC" --stake-cpu "200.0000 GOC" --buy-ram "200.0000 GOC" ')
     run(args.cleos + 'set contract zmaozmaozmao ./../random/ ')
     run(args.cleos + 'get table zmaozmaozmao 1 randoms')
@@ -88,7 +90,7 @@ def getTable(term):
             value += j['rows'][0]['producers_hash'][i]['value']
             i += 1
         hash = getHash(value)
-        randomFile.write('%s  term #%02d  %s \n' %(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime()), term, hash))
+        randomFile.write('%s  term #%02d  %25s \n' %(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime()), term, hash))
         print('term #', term, ' hash:', hash)
     
 
