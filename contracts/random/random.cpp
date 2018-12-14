@@ -49,7 +49,7 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
         {
             account_name producer;
             uint64_t hash;
-            uint64_t value = 0;
+            std::string value = "";
             uint8_t flag = 0;
         };
 
@@ -126,15 +126,15 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
         eosio::print("pushhash #", term, " success" );
     }
 
-    bool check_value(uint64_t value, uint64_t hash) {
-        if(value == hash + 1)
+    bool check_value(std::string value, uint64_t hash) {
+        if(HASH_STRING_PIECE(value) == hash)
             return true;
         return false;
     }
 
 
     // @abi action
-    void pushvalue(account_name producer, const uint64_t term, const uint64_t value)
+    void pushvalue(account_name producer, const uint64_t term, const std::string value)
     {
         require_auth(producer); //TODO:认证是否在生产者列表内
         random_table randoms(_self, _self);
