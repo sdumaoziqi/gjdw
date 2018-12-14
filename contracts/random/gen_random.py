@@ -54,16 +54,16 @@ def sleep(t):
 def setContract():
     run('g++ -o gen_hash gen_hash.cpp')
     sleep(1)
-    run(args.cleos + 'system newaccount --transfer useraaaaaaaa zmaozmaozmao GOC8ZjbDEi872aLpuuAjnd76NYW6KzPaf6RBSuwXcHmKm7A1sxayV --stake-net "200.0000 GOC" --stake-cpu "200.0000 GOC" --buy-ram "200.0000 GOC" ')
-    run(args.cleos + 'set contract zmaozmaozmao ./../random/ ')
-    run(args.cleos + 'get table zmaozmaozmao 1 randoms')
+    run(args.cleos + 'system newaccount --transfer useraaaaaaaa useruseruser GOC8ZjbDEi872aLpuuAjnd76NYW6KzPaf6RBSuwXcHmKm7A1sxayV --stake-net "200.0000 GOC" --stake-cpu "200.0000 GOC" --buy-ram "200.0000 GOC" ')
+    run(args.cleos + 'set contract useruseruser ./../random/ ')
+    run(args.cleos + 'get table useruseruser 1 randoms')
 
 
 def pushHash(producer, term, hash):
-    run(args.cleos + 'push action zmaozmaozmao pushhash \'["%s", %d, "%s"]\' -p %s' % (producer, term, hash, producer))
+    run(args.cleos + 'push action useruseruser pushhash \'["%s", %d, "%s"]\' -p %s' % (producer, term, hash, producer))
 
 def pushValue(producer, term, value):
-    run(args.cleos + 'push action zmaozmaozmao pushvalue \'["%s", %d, "%s"]\' -p %s' % (producer, term, value, producer))
+    run(args.cleos + 'push action useruseruser pushvalue \'["%s", %d, "%s"]\' -p %s' % (producer, term, value, producer))
 
 def runGetOutput(args):
     logFile.write(args + '\n')
@@ -79,7 +79,7 @@ def getRandom():
 
 
 def getTable(term):
-    res = runGetOutput(args.cleos + 'get table zmaozmaozmao %d randoms' %(term))
+    res = runGetOutput(args.cleos + 'get table useruseruser %d randoms' %(term))
     j = json.loads(res)
     value_count = j['rows'][0]['value_count']
     hash_count = j['rows'][0]['hash_count']
