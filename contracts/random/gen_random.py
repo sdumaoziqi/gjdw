@@ -53,6 +53,12 @@ def sleep(t):
 
 def setContract():
     run('g++ -o gen_hash gen_hash.cpp')
+    for producer in producerAccounts:
+        run(args.cleos + 'system buyram %s %s "1000.0000 GOC"' %(producer, producer))  #买一些内存
+    sleep(1)
+    run(args.eosiocpp + '-o random.wast random.cpp')
+    sleep(1)
+    run(args.eosiocpp + '-g random.abi random.cpp')
     sleep(1)
     run(args.cleos + 'system newaccount --transfer useraaaaaaaa useruseruser GOC8ZjbDEi872aLpuuAjnd76NYW6KzPaf6RBSuwXcHmKm7A1sxayV --stake-net "200.0000 GOC" --stake-cpu "200.0000 GOC" --buy-ram "200.0000 GOC" ')
     run(args.cleos + 'set contract useruseruser ./../random/ ')
@@ -110,7 +116,7 @@ class calRandom(threading.Thread):
 parser = argparse.ArgumentParser()
 
 
-
+parser.add_argument('--eosiocpp', metavar='', help="Eosiocpp command", default='../../build/tools/eosiocpp ')
 parser.add_argument('--cleos', metavar='', help="Cleos command", default='../../build/programs/cleos/cleos --wallet-url http://127.0.0.1:6666 ')
 parser.add_argument('--nodeos', metavar='', help="Path to nodeos binary", default='../../build/programs/nodeos/nodeos')
 parser.add_argument('--keosd', metavar='', help="Path to keosd binary", default='../../build/programs/keosd/keosd')
@@ -119,7 +125,7 @@ parser.add_argument('--nodes-dir', metavar='', help="Path to nodes directory", d
 parser.add_argument('--wallet-dir', metavar='', help="Path to wallet directory", default='./wallet/')
 parser.add_argument('--log-path', metavar='', help="Path to log file", default='./gen_random_log.log')
 parser.add_argument('--random-path', metavar='', help="Path to random file", default='./random.txt')
-parser.add_argument('-r', '--round', metavar='', help="num of random", default=5)
+parser.add_argument('-r', '--round', metavar='', help="Num of random", default=5)
 
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
