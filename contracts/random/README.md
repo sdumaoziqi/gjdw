@@ -2,7 +2,7 @@
 
 ### 文件说明
 
-`gen_hash` 本地计算hash的可执行文件，由`gen_hash.cpp` 编译生成。hash计算算法与`random.cpp`合约文件的算法一致。
+`gen_hash` 本地计算hash的可执行文件，由`gen_hash.cpp` 通过gcc编译生成。hash计算算法与`random.cpp`合约文件的算法一致。
 
 `gen_hash.cpp`本地计算hash的源文件与`random.cpp`合约文件的算法一致。
 
@@ -32,7 +32,7 @@
 
 生成间隔可在`gen_random.py`中调整。
 
-
+生成`gen_hash` 要求安装gcc。
 
 ### TODO
 
