@@ -51,11 +51,11 @@ def sleep(t):
 def setContract():
     run(args.cleos + 'system newaccount --transfer useraaaaaaaa zmaozmaozmao GOC8ZjbDEi872aLpuuAjnd76NYW6KzPaf6RBSuwXcHmKm7A1sxayV --stake-net "200.0000 GOC" --stake-cpu "200.0000 GOC" --buy-ram "200.0000 GOC" ')
     run(args.cleos + 'set contract zmaozmaozmao ./../random/ ')
-    run(args.cleos + 'get table zmaozmaozmao zmaozmaozmao randoms')
+    run(args.cleos + 'get table zmaozmaozmao 1 randoms')
 
 
 def pushHash(producer, term, hash):
-    run(args.cleos + 'push action zmaozmaozmao pushhash \'["%s", %d, %d]\' -p %s' % (producer, term, int(hash), producer)) #hsah还是str类型
+    run(args.cleos + 'push action zmaozmaozmao pushhash \'["%s", %d, "%s"]\' -p %s' % (producer, term, hash, producer))
 
 def pushValue(producer, term, value):
     run(args.cleos + 'push action zmaozmaozmao pushvalue \'["%s", %d, "%s"]\' -p %s' % (producer, term, value, producer))
@@ -102,21 +102,13 @@ logFile.write('\n\n' + '*' * 80 + '\n\n\n')
 
 term = 1
 
-class producerInfo:
-    def __init__(self):
-        self.name = ''
-        self.random = ''
-        self.hash = 0
-        self.term = 0
-        
-#a = producerInfo()
 
 dict = {'useraaaaaaaa': 1, 'useraaaaaaab': 2, 'useraaaaaaac': 3}
 
 setContract()
 
 while term < 10:
-    print('***************************')
+    print('*' * 60)
     sleep(2)
     for producer in producerAccounts:
         random = getRandom()

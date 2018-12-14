@@ -48,7 +48,7 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
         struct hash_info
         {
             account_name producer;
-            uint64_t hash;
+            std::string hash = "";
             std::string value = "";
             uint8_t flag = 0;
         };
@@ -77,7 +77,7 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
 
 
     // @abi action
-    void pushhash(account_name producer, const uint64_t term, const uint64_t hash)
+    void pushhash(account_name producer, const uint64_t term, const std::string hash)
     {
         require_auth(producer); //TODO:认证是否在生产者列表内
         hash_info cur_hash_info;
@@ -89,7 +89,7 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
         cur_hash_info.hash = hash;
         cur_hash_info.flag = 1;
 
-        random_table randoms(_self, _self);
+        random_table randoms(_self, term);
         auto random_term = randoms.find(term);  //找到该轮次
 
         if(random_term == randoms.end()) {
@@ -126,7 +126,7 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
         eosio::print("pushhash #", term, " success" );
     }
 
-    bool check_value(std::string value, uint64_t hash) {
+    bool check_value(std::string value, std::string hash) {
         if(HASH_STRING_PIECE(value) == hash)
             return true;
         return false;
@@ -137,7 +137,7 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
     void pushvalue(account_name producer, const uint64_t term, const std::string value)
     {
         require_auth(producer); //TODO:认证是否在生产者列表内
-        random_table randoms(_self, _self);
+        random_table randoms(_self, term);
         auto random_term = randoms.find(term);  //找到该轮次
         if(random_term == randoms.end()) {
             eosio::print("term #", term, " not start yet");
@@ -197,18 +197,18 @@ std::vector<account_name> producers = {N(useraaaaaaaa), N(useraaaaaaab), N(usera
         }
     }
 
-uint64_t HASH_STRING_PIECE(std::string string_piece) {                 
-    uint64_t result = 0;                                                        
+std::string HASH_STRING_PIECE(std::string string_piece) {
+    int64_t result = 0;
     for (auto it = string_piece.cbegin(); it != string_piece.cend(); ++it) {  
-        result = (result * 131) + *it;                                       
+        result = (result * 131) + *it;
     }                                                                         
-    return result;
+    return std::to_string(result);
 }
 
     // @abi action
     void testhash(const std::string value)
     {
-        uint64_t  n = HASH_STRING_PIECE(value);
+        std::string  n = HASH_STRING_PIECE(value);
         eosio:print("result: ", n);
         return;
     }
