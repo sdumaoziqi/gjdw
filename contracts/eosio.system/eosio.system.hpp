@@ -74,6 +74,8 @@ namespace eosiosystem {
       uint32_t             max_shard = 24;
       int64_t              per_stake_reward = 0;
 
+      uint32_t             max_record = 5 + 1;
+
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE_DERIVED( eosio_global_state, eosio::blockchain_parameters,
@@ -84,7 +86,20 @@ namespace eosiosystem {
                                 (goc_proposal_fee_limit)(goc_stake_limit)(goc_action_fee)(goc_max_proposal_reward)(goc_max_prop_reward_per_voter)
                                 (goc_governance_vote_period)(goc_bp_vote_period)(goc_vote_start_time)
                                 (goc_voter_bucket)(goc_gn_bucket)(goc_lockbw_stake)(last_gn_bucket_empty)(last_voter_bucket_empty)(total_stake)
-                                (curr_index)(max_shard)(per_stake_reward) )
+                                (curr_index)(max_shard)(per_stake_reward)
+                                (max_record) )
+   };
+
+   struct record{
+      int64_t per_reward;
+      time claim_time;
+   };
+
+   struct goc_per_reward_info {
+      uint32_t      cur_point;
+      std::vector<record>        claim_records;
+
+      EOSLIB_SERIALIZE( goc_per_reward_info, (cur_point)(claim_records) )
    };
 
    struct producer_info {
@@ -131,13 +146,13 @@ namespace eosiosystem {
 
 
       uint32_t                    reserved1 = 0;
-      time                        reserved2 = 0;
+      time                        last_calc_time = 0;
       eosio::asset                reserved3;
 
       uint64_t primary_key()const { return owner; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(last_vote_stake)(proxied_vote_weight)(proxied_vote_stake)(is_proxy)(reserved1)(reserved2)(reserved3) )
+      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(last_vote_stake)(proxied_vote_weight)(proxied_vote_stake)(is_proxy)(reserved1)(last_calc_time)(reserved3) )
    };
 
    struct goc_proposal_info {
@@ -269,6 +284,8 @@ namespace eosiosystem {
 
    typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
 
+   typedef eosio::singleton<N(rewardapi), goc_per_reward_info>  per_rewards_singleton;
+
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
    static constexpr uint64_t     system_token_symbol = CORE_SYMBOL;
@@ -276,11 +293,13 @@ namespace eosiosystem {
    class system_contract : public native {
       private:
          voters_table           _voters;
+         per_rewards_singleton  _rewardapi;
          producers_table        _producers;
          goc_proposals_table    _gocproposals;
          global_state_singleton _global;
          locked_bandwidth_table _lockband;
 
+         goc_per_reward_info    _perrewards;
          eosio_global_state     _gstate;
          rammarket              _rammarket;
 
@@ -413,8 +432,12 @@ namespace eosiosystem {
 
          int64_t calc_net_cpu_weight(asset net_quantity, asset cpu_quantity, uint8_t lock_type);
 
+         void calc_per_reward(account_name payer, account_name receiver, int64_t offset);
+
          //defined in voting.hpp
          static eosio_global_state get_default_parameters();
+
+         static goc_per_reward_info get_default_per_rewards();
 
          void update_votes( const account_name voter, const account_name proxy, const std::vector<account_name>& producers, bool voting );
 

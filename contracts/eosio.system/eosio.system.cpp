@@ -13,6 +13,7 @@ namespace eosiosystem {
    system_contract::system_contract( account_name s )
    :native(s),
     _voters(_self,_self),
+    _rewardapi(_self,_self),
     _producers(_self,_self),
     _gocproposals(_self,_self),
     _global(_self,_self),
@@ -21,6 +22,7 @@ namespace eosiosystem {
    {
       //print( "construct system\n" );
       _gstate = _global.exists() ? _global.get() : get_default_parameters();
+      _perrewards = _rewardapi.exists() ? _rewardapi.get() : get_default_per_rewards();
 
       auto itr = _rammarket.find(S(4,RAMCORE));
 
@@ -47,10 +49,25 @@ namespace eosiosystem {
       return dp;
    }
 
+   goc_per_reward_info system_contract::get_default_per_rewards() {
+      goc_per_reward_info dr;
+
+      dr.cur_point = 0;
+
+      record tmp;
+      tmp.per_reward = 0;
+      tmp.claim_time = 0;
+
+      dr.claim_records.assign(6, tmp); //must be consistent with _gstate.max_record
+
+      return dr;
+   }
+
 
    system_contract::~system_contract() {
       //print( "destruct system\n" );
       _global.set( _gstate, _self );
+      _rewardapi.set(_perrewards, _self);
       //eosio_exit(0);
    }
 

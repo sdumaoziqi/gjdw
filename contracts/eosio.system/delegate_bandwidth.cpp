@@ -391,6 +391,82 @@ namespace eosiosystem {
       }
    }
 
+
+   void system_contract::calc_per_reward(account_name payer, account_name receiver, int64_t offset)
+   {
+
+      auto time_now = now();
+
+      auto owner = _voters.find(receiver);
+      if( owner == _voters.end() ) return; //should not to here
+      
+
+      int64_t sum_per_reward = 0;
+      uint32_t count = 0;
+      uint32_t index = (_perrewards.cur_point - 1 + _gstate.max_record) % _gstate.max_record;
+
+      // calc reward
+      if(owner->last_calc_time == 0) { //first time calc
+            sum_per_reward = 0; //TODO
+      } else {
+            while(owner->last_calc_time < _perrewards.claim_records.at(index).claim_time
+                  && count < _gstate.max_record - 1) {
+                  sum_per_reward += _perrewards.claim_records.at(index).per_reward;
+                  index = (index - 1 + _gstate.max_record) % _gstate.max_record;
+                  count ++;
+            }
+            sum_per_reward = sum_per_reward > 0 ? sum_per_reward : 0;
+            // uint32_t curr = (index + 1) % _gstate.max_record;
+            // sum_per_reward -= _perrewards.claim_records.at(curr).per_reward 
+            //                   * (owner->last_calc_time - _perrewards.claim_records.at(index).claim_time) 
+            //                   / (_perrewards.claim_records.at(curr).claim_time - _perrewards.claim_records.at(index).claim_time);
+
+      }
+
+      int64_t reward_stake = 0;
+
+
+      _voters.modify( owner, payer, [&]( auto& v ) {
+            v.last_calc_time = time_now;
+      });
+
+      if( owner->producers.size() == 0 ) return; // must vote producer. return after set last_calc_time
+      
+      // stake amount
+      if(owner->proxy) {
+            reward_stake = 0;
+      } else {
+            if(owner->is_proxy)
+                  reward_stake = owner->staked + owner->proxied_vote_stake;
+            else
+                  reward_stake = owner->staked;
+      }
+
+      reward_stake += offset;
+      reward_stake = reward_stake > 0 ? reward_stake : 0;
+
+
+      goc_vote_rewards_table vrewards(_self, receiver);
+
+      auto from_vreward = vrewards.find((uint64_t)0);  //find reward_id = 0 
+
+      if( from_vreward == vrewards.end() ) {
+            from_vreward = vrewards.emplace( _self, [&]( auto& v ) {
+            v.reward_id = 0;
+            v.reward_time  = time_now;
+            v.rewards = reward_stake * sum_per_reward;
+            });
+      } else {
+            vrewards.modify( from_vreward, 0, [&]( auto& v ) {
+            v.reward_time  = time_now;
+            v.rewards += reward_stake * sum_per_reward;
+            });
+      }
+
+   }
+
+
+
    void system_contract::delegatebw( account_name from, account_name receiver,
                                      asset stake_net_quantity,
                                      asset stake_cpu_quantity, bool transfer )
@@ -401,6 +477,11 @@ namespace eosiosystem {
       eosio_assert( !transfer || from != receiver, "cannot use transfer flag if delegating to self" );
 
       changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
+
+      int64_t offset = -(stake_net_quantity.amount + stake_cpu_quantity.amount);
+
+      calc_per_reward( from, transfer ? receiver : from, offset );
+
    } // delegatebw
 
    void system_contract::undelegatebw( account_name from, account_name receiver,
@@ -425,6 +506,8 @@ namespace eosiosystem {
       }
 
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
+
+      calc_per_reward( from, from, unstake_net_quantity.amount + unstake_cpu_quantity.amount );
    } // undelegatebw
 
 
@@ -494,6 +577,10 @@ namespace eosiosystem {
       _gstate.goc_lockbw_stake += net_cpu_weight;
 
       changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
+
+      int64_t offset = -(stake_net_quantity.amount + stake_cpu_quantity.amount);
+
+      calc_per_reward( from, transfer ? receiver : from, offset );
    }
 
    void system_contract::unlockbw( account_name owner, account_name receiver, uint32_t lock_id, bool force_end ) {

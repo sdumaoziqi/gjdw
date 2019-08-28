@@ -100,82 +100,37 @@ namespace eosiosystem {
       auto ct = current_time();
       auto time_now = now();
 
-      eosio_assert( ct - prod.last_claim_time > useconds_per_day / _gstate.max_shard, "already claimed rewards within past day" );
 
+      eosio_assert( ct - prod.last_claim_time > useconds_per_day, "already claimed rewards within past day" );
 
-      //GOC cal vote rewards every 24H/max_shard
-      if ( time_now >= _gstate.last_voter_bucket_empty + seconds_per_day / _gstate.max_shard ) {
-         
-         if( _gstate.curr_index == 0 ) {
-             // multiply 1000000000 to avoid zero casting. goc_voter_bucket max value will be 10^9 * 0.04879 * days / 365 * 0.5%, so the data is safe.
-            _gstate.per_stake_reward = static_cast<int64_t>(_gstate.goc_voter_bucket * 1'000'000'000 / ( _gstate.total_stake + _gstate.goc_lockbw_stake ));
-            //empty the voter bucket every time, left token saved in vs account
-            _gstate.goc_voter_bucket = 0;
-         }
-
-          // count all voters
-          for(auto& voter : _voters) {
-             account_name reward_to;
-             int64_t reward_stake;
-
-             if( (voter.producers.size() != 0)
-              && (voter.staked >= 100'000'0000 || voter.proxied_vote_stake >= 100'000'0000 )
-              && ( get_name_hash(voter.owner) % _gstate.max_shard == _gstate.curr_index ) ) { //100 000 GOC
-                //proxy will take all proxied stake reward and its own stake reward
-                if(voter.proxy) {
-                   reward_to = 0;
-                   reward_stake = 0;
-                } else {
-                   reward_to = voter.owner;
-                   if(voter.is_proxy)
-                     reward_stake = voter.staked + voter.proxied_vote_stake;
-                   else
-                     reward_stake = voter.staked;
-                }
-
-               if(reward_stake > 0) {
-                  goc_vote_rewards_table vrewards(_self, reward_to);
-
-                  auto from_vreward = vrewards.find((uint64_t)0);  //find reward_id = 0 
-
-                  if( from_vreward == vrewards.end() ) {
-                     from_vreward = vrewards.emplace( _self, [&]( auto& v ) {
-                        v.reward_id = 0;
-                        v.reward_time  = time_now;
-                        v.rewards = _gstate.per_stake_reward * reward_stake;
-                     });
-                  } else {
-                     vrewards.modify( from_vreward, 0, [&]( auto& v ) {
-                        v.reward_time  = time_now;
-                        v.rewards += _gstate.per_stake_reward * reward_stake;
-                     });
-                  }
-                  
-               }
-             }
-          }
-
+      {
           // count all lockbw
           auto idx = _lockband.get_index<N(byendtime)>();
           for( auto it = idx.cend(); it != idx.cbegin(); ) {
              --it;
-             if (it->id % _gstate.max_shard == _gstate.curr_index ) {
-               if (time_now < it->lock_end_time) {
-                  idx.modify(it, 0, [&](auto& info){
-                     info.reward_bucket += _gstate.per_stake_reward * it->net_cpu_weight;
-                  });
-               } else {
-                  break;
-               }
-             }
+            if (time_now < it->lock_end_time) {
+                int64_t sum_per_reward = 0;
+                uint32_t count = 0;
+                uint32_t index = (_perrewards.cur_point - 1 + _gstate.max_record) % _gstate.max_record;
+
+                while(it->lock_time < _perrewards.claim_records.at(index).claim_time
+                    && count < _gstate.max_record - 1) {
+                    if(it->lock_end_time > _perrewards.claim_records.at(index).claim_time) { // not necessary due to check this every time.
+                        sum_per_reward += _perrewards.claim_records.at(index).per_reward;
+                    }
+                    index = (index - 1 + _gstate.max_record) % _gstate.max_record;
+                    count ++;
+                }
+                sum_per_reward = sum_per_reward > 0 ? sum_per_reward : 0;
+
+                idx.modify(it, 0, [&](auto& info){
+                    info.reward_bucket += sum_per_reward * it->net_cpu_weight;
+                });
+            } else {
+                break;
+            }
           }
-
-          //reset voter bucket empty time
-          _gstate.last_voter_bucket_empty = time_now;
-
-          _gstate.curr_index = (++ _gstate.curr_index) % _gstate.max_shard;
       }
-
 
       const asset token_supply   = token( N(gocio.token)).get_supply(symbol_type(system_token_symbol).name() );
       const auto usecs_since_last_fill = ct - _gstate.last_pervote_bucket_fill;
@@ -223,6 +178,15 @@ namespace eosiosystem {
          _gstate.goc_voter_bucket += to_voters;
 
          _gstate.last_pervote_bucket_fill = ct;
+
+         // calc per stake reward
+         record& idx = _perrewards.claim_records[_perrewards.cur_point];
+         idx.per_reward = static_cast<int64_t>(to_voters * 1'000'000'000 / ( _gstate.total_stake + _gstate.goc_lockbw_stake ));;
+         idx.claim_time = time_now;
+         _perrewards.cur_point = ++_perrewards.cur_point % _gstate.max_record;
+
+         _rewardapi.set(_perrewards, _self);
+
       }
 
 

@@ -375,7 +375,22 @@
          {"name":"total_stake",                   "type":"uint64"},
          {"name":"curr_index",                    "type":"uint32"},
          {"name":"max_shard",                     "type":"uint32"},
-         {"name":"per_stake_reward",            "type":"int64"}
+         {"name":"per_stake_reward",              "type":"int64"},
+         {"name":"max_record",                    "type":"uint32"}
+      ]
+    },{
+      "name": "record",
+      "base": "",
+      "fields": [
+         {"name":"per_reward",                  "type":"int64"},
+         {"name":"claim_time",                "type":"time_point_sec"}
+      ]
+    },{
+      "name": "goc_per_reward_info",
+      "base": "",
+      "fields": [
+         {"name":"cur_point",                  "type":"uint32"},
+         {"name":"claim_records",              "type":"record[]"}
       ]
     },{
       "name": "producer_info",
@@ -438,7 +453,10 @@
         {"name":"last_vote_stake",      "type":"int64"},
         {"name":"proxied_vote_weight",  "type":"float64"},
         {"name":"proxied_vote_stake",   "type":"int64"},
-        {"name":"is_proxy",             "type":"bool"}
+        {"name":"is_proxy",             "type":"bool"},
+        {"name":"reserved1",            "type":"uint32"},
+        {"name":"last_calc_time",       "type":"time_point_sec"},
+        {"name":"reserved3",            "type":"asset"}
       ]
     },{
       "name": "goc_proposal_info",
@@ -765,6 +783,12 @@
     },{
       "name": "global",
       "type": "eosio_global_state",
+      "index_type": "i64",
+      "key_names" : [],
+      "key_types" : []
+    },{
+      "name": "rewardapi",
+      "type": "goc_per_reward_info",
       "index_type": "i64",
       "key_names" : [],
       "key_types" : []
