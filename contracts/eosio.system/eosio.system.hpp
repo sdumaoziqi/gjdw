@@ -74,7 +74,7 @@ namespace eosiosystem {
       uint32_t             max_shard = 24;
       int64_t              per_stake_reward = 0;
 
-      uint32_t             max_record = 5 + 1;
+      uint32_t             max_record = 365 + 1;
 
 
       // explicit serialization macro is not necessary, used here only to improve compilation time

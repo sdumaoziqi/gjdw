@@ -58,7 +58,7 @@ namespace eosiosystem {
       tmp.per_reward = 0;
       tmp.claim_time = 0;
 
-      dr.claim_records.assign(6, tmp); //must be consistent with _gstate.max_record
+      dr.claim_records.assign(366, tmp); //must be consistent with _gstate.max_record
 
       return dr;
    }
