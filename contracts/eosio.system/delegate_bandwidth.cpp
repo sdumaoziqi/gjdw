@@ -511,6 +511,13 @@ namespace eosiosystem {
    } // undelegatebw
 
 
+   void system_contract::calcvrewards( account_name owner )
+   {
+      require_auth( owner );
+      calc_per_reward( owner, owner, 0 );
+   }
+
+
    int64_t system_contract::calc_net_cpu_weight(asset net_quantity, asset cpu_quantity, uint8_t lock_type)
    {
       if (lock_type < 0 || lock_type > 4)

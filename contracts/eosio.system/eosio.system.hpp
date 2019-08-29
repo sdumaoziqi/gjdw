@@ -341,6 +341,8 @@ namespace eosiosystem {
          void undelegatebw( account_name from, account_name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
 
+         void calcvrewards( account_name owner);
+
          /**
           *  GOC will reward voter who lock delegate and vote for long time.
           *  all stake is counted in vote weight, reward calculated every day (with declared time ratio) but only settled when finished.
