@@ -555,6 +555,13 @@ public:
 
    }
 
+   fc::variant get_goc_per_reward_info() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rewardapi), N(rewardapi) );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "goc_per_reward_info", data, abi_serializer_max_time );
+
+   }
+
    fc::variant get_refund_request( name account ) {
       vector<char> data = get_row_by_account( config::system_account_name, account, N(refunds), account );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "refund_request", data, abi_serializer_max_time );

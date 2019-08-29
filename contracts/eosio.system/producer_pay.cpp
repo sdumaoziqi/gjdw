@@ -101,7 +101,7 @@ namespace eosiosystem {
       auto time_now = now();
 
 
-      eosio_assert( ct - prod.last_claim_time > useconds_per_day, "already claimed rewards within past day" );
+      eosio_assert( ct - prod.last_claim_time >= useconds_per_day, "already claimed rewards within past day" );
 
       {
           // count all lockbw

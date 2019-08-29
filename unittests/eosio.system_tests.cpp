@@ -3051,13 +3051,63 @@ BOOST_FIXTURE_TEST_CASE(goc_vreward_test, eosio_system_tester, * boost::unit_tes
    // ??? use create_account_with_resources() creat alice1111111 in eosio_system_tester() have delegatebw some GOC, it doesn't include to the "staked"???
    BOOST_TEST_REQUIRE( 20000000000000 == get_voter_info( "alice1111111" )["staked"].as_uint64() );
 
+   BOOST_REQUIRE_EQUAL(success(), vote( N(alice1111111), { N(defproducera) })); // to get vreward, vote producer is necessary.
+
    auto total = get_total_stake( "alice1111111" );
    BOOST_REQUIRE_EQUAL( 10000000000000, total["net_weight"].as<asset>().get_amount() - initial_total["net_weight"].as<asset>().get_amount() );
    BOOST_REQUIRE_EQUAL( 10000000000000, total["cpu_weight"].as<asset>().get_amount() - initial_total["cpu_weight"].as<asset>().get_amount() );
    BOOST_REQUIRE_EQUAL(              0, total["locked_net"].as<asset>().get_amount() - initial_total["locked_net"].as<asset>().get_amount() );
    BOOST_REQUIRE_EQUAL(              0, total["locked_cpu"].as<asset>().get_amount() - initial_total["locked_cpu"].as<asset>().get_amount() );
 
-   const auto     initial_global_state      = get_global_state();
+
+
+   const auto     initial_global_state              = get_global_state();
+   const auto     initial_per_rewardd_info          = get_goc_per_reward_info();
+   const auto     initial_vote_alice                = get_voter_info("alice1111111");
+
+
+   const auto     initial_vreward_alice      = get_vote_rewards_info("alice1111111", 0);
+   BOOST_REQUIRE_EQUAL(true, initial_vreward_alice.is_null());
+
+
+   produce_blocks( 1000 );
+   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+   produce_block( fc::days(1) );
+   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+
+   auto     per_reward_info         = get_goc_per_reward_info();
+
+   int64_t sum_per_reward = 0;
+
+   struct record{
+      int64_t per_reward;
+      uint32_t claim_time;
+   };
+
+
+
+   vector<pair<int64_t, uint32_t>> records;
+
+   if( !per_reward_info.is_null()) {
+         records = per_reward_info["claim_records"].as<vector<pair<int64_t, uint32_t>>>();  // TODO: bug
+   }
+      
+
+//    for(int i = 0; i < records.size(); ++i) {
+//          if(records[i]["claim_time"] > initial_vote_alice["last_calc_time"])
+//          sum_per_reward += records[i]["per_reward"];
+//    }
+//    sum_per_reward += per_reward_info["data"]["claim_records"]["0"]["per_reward"];
+
+
+   BOOST_REQUIRE_EQUAL( 1, records.size() );
+
+
+   BOOST_REQUIRE_EQUAL(success(), stake("alice1111111", core_from_string("1.0000"), core_from_string("1.0000")));
+
+
+
+
    BOOST_REQUIRE_EQUAL( 24, initial_global_state["max_shard"].as<uint32_t>() );
    BOOST_REQUIRE_EQUAL( 0, initial_global_state["curr_index"].as<uint32_t>() );
    // alice1111111 not yet vote, so the total_stake is 0
