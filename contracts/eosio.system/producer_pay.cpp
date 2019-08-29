@@ -103,7 +103,7 @@ namespace eosiosystem {
 
       eosio_assert( ct - prod.last_claim_time >= useconds_per_day, "already claimed rewards within past day" );
 
-      {
+      if ( time_now >= _gstate.last_voter_bucket_empty + seconds_per_day){
           // count all lockbw
           auto idx = _lockband.get_index<N(byendtime)>();
           for( auto it = idx.cend(); it != idx.cbegin(); ) {
@@ -115,7 +115,7 @@ namespace eosiosystem {
 
                 while(it->lock_time < _perrewards.claim_records.at(index).claim_time
                     && count < _gstate.max_record - 1) {
-                    if(it->lock_end_time > _perrewards.claim_records.at(index).claim_time) { // not necessary due to check this every time.
+                    if(it->lock_end_time > _perrewards.claim_records.at(index).claim_time) { // not necessary due to check this every day.
                         sum_per_reward += _perrewards.claim_records.at(index).per_reward;
                     }
                     index = (index - 1 + _gstate.max_record) % _gstate.max_record;
@@ -130,6 +130,16 @@ namespace eosiosystem {
                 break;
             }
           }
+
+         // calc per stake reward
+         record& cur_reward = _perrewards.claim_records[_perrewards.cur_point];
+         cur_reward.per_reward = static_cast<int64_t>(_gstate.goc_voter_bucket * 1'000'000'000 / ( _gstate.total_stake + _gstate.goc_lockbw_stake ));;
+         cur_reward.claim_time = time_now;
+         _perrewards.cur_point = (_perrewards.cur_point + 1) % _gstate.max_record;
+         _rewardapi.set(_perrewards, _self);
+
+         _gstate.goc_voter_bucket = 0;
+         _gstate.last_voter_bucket_empty = time_now;
       }
 
       const asset token_supply   = token( N(gocio.token)).get_supply(symbol_type(system_token_symbol).name() );
@@ -178,14 +188,6 @@ namespace eosiosystem {
          _gstate.goc_voter_bucket += to_voters;
 
          _gstate.last_pervote_bucket_fill = ct;
-
-         // calc per stake reward
-         record& idx = _perrewards.claim_records[_perrewards.cur_point];
-         idx.per_reward = static_cast<int64_t>(to_voters * 1'000'000'000 / ( _gstate.total_stake + _gstate.goc_lockbw_stake ));;
-         idx.claim_time = time_now;
-         _perrewards.cur_point = ++_perrewards.cur_point % _gstate.max_record;
-
-         _rewardapi.set(_perrewards, _self);
 
       }
 
