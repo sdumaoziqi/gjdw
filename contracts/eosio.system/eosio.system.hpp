@@ -72,9 +72,10 @@ namespace eosiosystem {
 
       uint32_t             curr_index = 0;
       uint32_t             max_shard = 24;
-      int64_t              per_stake_reward = 0;
+      // int64_t              per_stake_reward = 0;
 
-      uint32_t             max_record = 365 + 1;
+      uint64_t             cur_point = 0;
+      uint64_t             max_record = 365;
 
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -86,20 +87,19 @@ namespace eosiosystem {
                                 (goc_proposal_fee_limit)(goc_stake_limit)(goc_action_fee)(goc_max_proposal_reward)(goc_max_prop_reward_per_voter)
                                 (goc_governance_vote_period)(goc_bp_vote_period)(goc_vote_start_time)
                                 (goc_voter_bucket)(goc_gn_bucket)(goc_lockbw_stake)(last_gn_bucket_empty)(last_voter_bucket_empty)(total_stake)
-                                (curr_index)(max_shard)(per_stake_reward)
-                                (max_record) )
+                                (curr_index)(max_shard)//(per_stake_reward)
+                                (cur_point)(max_record) )
    };
 
-   struct record{
-      int64_t per_reward;
-      time claim_time;
-   };
 
    struct goc_per_reward_info {
-      uint32_t      cur_point;
-      std::vector<record>        claim_records;
+      uint64_t   id;
+      int64_t    per_reward;
+      time       claim_time;
 
-      EOSLIB_SERIALIZE( goc_per_reward_info, (cur_point)(claim_records) )
+      uint64_t  primary_key()const     { return id; }
+
+      EOSLIB_SERIALIZE( goc_per_reward_info, (id)(per_reward)(claim_time) )
    };
 
    struct producer_info {
@@ -284,7 +284,7 @@ namespace eosiosystem {
 
    typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
 
-   typedef eosio::singleton<N(rewardapi), goc_per_reward_info>  per_rewards_singleton;
+   typedef eosio::multi_index<N(perrewards), goc_per_reward_info>  per_rewards_table;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -293,13 +293,12 @@ namespace eosiosystem {
    class system_contract : public native {
       private:
          voters_table           _voters;
-         per_rewards_singleton  _rewardapi;
+         per_rewards_table      _perrewards;
          producers_table        _producers;
          goc_proposals_table    _gocproposals;
          global_state_singleton _global;
          locked_bandwidth_table _lockband;
 
-         goc_per_reward_info    _perrewards;
          eosio_global_state     _gstate;
          rammarket              _rammarket;
 
@@ -438,8 +437,6 @@ namespace eosiosystem {
 
          //defined in voting.hpp
          static eosio_global_state get_default_parameters();
-
-         static goc_per_reward_info get_default_per_rewards();
 
          void update_votes( const account_name voter, const account_name proxy, const std::vector<account_name>& producers, bool voting );
 

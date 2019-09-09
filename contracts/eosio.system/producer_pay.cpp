@@ -75,18 +75,6 @@ namespace eosiosystem {
       }
    }
 
-   inline uint64_t get_name_hash(uint64_t name) {
-      return (((name & 0xff00000000000000ull) >> 56)
-            + ((name & 0x00ff000000000000ull) >> 48)
-            + ((name & 0x0000ff0000000000ull) >> 40)
-            + ((name & 0x000000ff00000000ull) >> 32)
-            + ((name & 0x00000000ff000000ull) >> 24)
-            + ((name & 0x0000000000ff0000ull) >> 16)
-            + ((name & 0x000000000000ff00ull) >> 8)
-            + ((name & 0x00000000000000ffull) >> 0));
-   }
-
-
    using namespace eosio;
    void system_contract::claimrewards( const account_name& owner ) {
       require_auth(owner);
@@ -100,47 +88,7 @@ namespace eosiosystem {
       auto ct = current_time();
       auto time_now = now();
 
-
       eosio_assert( ct - prod.last_claim_time >= useconds_per_day, "already claimed rewards within past day" );
-
-      if ( time_now >= _gstate.last_voter_bucket_empty + seconds_per_day){
-          // count all lockbw
-          auto idx = _lockband.get_index<N(byendtime)>();
-          for( auto it = idx.cend(); it != idx.cbegin(); ) {
-             --it;
-            if (time_now < it->lock_end_time) {
-                int64_t sum_per_reward = 0;
-                uint32_t count = 0;
-                uint32_t index = (_perrewards.cur_point - 1 + _gstate.max_record) % _gstate.max_record;
-
-                while(it->lock_time < _perrewards.claim_records.at(index).claim_time
-                    && count < _gstate.max_record - 1) {
-                    if(it->lock_end_time > _perrewards.claim_records.at(index).claim_time) { // not necessary due to check this every day.
-                        sum_per_reward += _perrewards.claim_records.at(index).per_reward;
-                    }
-                    index = (index - 1 + _gstate.max_record) % _gstate.max_record;
-                    count ++;
-                }
-                sum_per_reward = sum_per_reward > 0 ? sum_per_reward : 0;
-
-                idx.modify(it, 0, [&](auto& info){
-                    info.reward_bucket += sum_per_reward * it->net_cpu_weight;
-                });
-            } else {
-                break;
-            }
-          }
-
-         // calc per stake reward
-         record& cur_reward = _perrewards.claim_records[_perrewards.cur_point];
-         cur_reward.per_reward = static_cast<int64_t>(_gstate.goc_voter_bucket * 1'000'000'000 / ( _gstate.total_stake + _gstate.goc_lockbw_stake ));;
-         cur_reward.claim_time = time_now;
-         _perrewards.cur_point = (_perrewards.cur_point + 1) % _gstate.max_record;
-         _rewardapi.set(_perrewards, _self);
-
-         _gstate.goc_voter_bucket = 0;
-         _gstate.last_voter_bucket_empty = time_now;
-      }
 
       const asset token_supply   = token( N(gocio.token)).get_supply(symbol_type(system_token_symbol).name() );
       const auto usecs_since_last_fill = ct - _gstate.last_pervote_bucket_fill;
@@ -189,6 +137,53 @@ namespace eosiosystem {
 
          _gstate.last_pervote_bucket_fill = ct;
 
+      }
+
+      if ( time_now >= _gstate.last_voter_bucket_empty + seconds_per_day){
+
+          // count all lockbw
+          auto idx = _lockband.get_index<N(byendtime)>();
+          for( auto it = idx.cend(); it != idx.cbegin(); ) {
+             --it;
+            if (time_now < it->lock_end_time) {
+                int64_t sum_per_reward = 0;
+                uint64_t count = 0;
+                uint64_t index = _gstate.cur_point - 1;
+
+                while(index > 0 && count <= _gstate.max_record) {
+                    auto &perreward = _perrewards.get(index, "_perrewards index not exist");
+
+                    if(it->lock_time > perreward.claim_time) break;
+
+                    if(it->lock_end_time > perreward.claim_time) { // not necessary due to check this every day.
+                        sum_per_reward += perreward.per_reward;
+                    }
+                    -- index;
+                    ++ count;
+                }
+                sum_per_reward = sum_per_reward > 0 ? sum_per_reward : 0;
+
+                idx.modify(it, 0, [&](auto& info){
+                    info.reward_bucket += sum_per_reward * it->net_cpu_weight;
+                });
+            } else {
+                break;
+            }
+          }
+
+         // calc per stake reward.  add to table
+         int64_t per_reward = static_cast<int64_t>(_gstate.goc_voter_bucket * 1'000'000'000 / ( _gstate.total_stake + _gstate.goc_lockbw_stake ));;
+
+         _perrewards.emplace(_self, [&](auto &per) {
+             per.id = _gstate.cur_point;
+             per.per_reward = per_reward;
+             per.claim_time = time_now;
+         });
+
+         ++ _gstate.cur_point;
+
+         _gstate.goc_voter_bucket = 0;
+         _gstate.last_voter_bucket_empty = time_now;
       }
 
 

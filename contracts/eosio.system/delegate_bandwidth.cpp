@@ -402,25 +402,25 @@ namespace eosiosystem {
       
 
       int64_t sum_per_reward = 0;
-      uint32_t count = 0;
-      uint32_t index = (_perrewards.cur_point - 1 + _gstate.max_record) % _gstate.max_record;
+      uint64_t count = 0;
+      uint64_t index = _gstate.cur_point - 1;
 
       // calc reward
       if(owner->last_calc_time == 0) { //first time calc
             sum_per_reward = 0; //TODO
       } else {
-            while(owner->last_calc_time < _perrewards.claim_records.at(index).claim_time
-                  && count < _gstate.max_record - 1) {
-                  sum_per_reward += _perrewards.claim_records.at(index).per_reward;
-                  index = (index - 1 + _gstate.max_record) % _gstate.max_record;
-                  count ++;
+            while(index > 0 && count <= _gstate.max_record) {
+                  auto &perreward = _perrewards.get(index, "_perrewards index not exist");
+
+                  if(perreward.claim_time >= owner->last_calc_time) {
+                        sum_per_reward += perreward.per_reward;
+                        -- index;
+                        ++ count;
+                  } else {
+                        break;
+                  }
             }
             sum_per_reward = sum_per_reward > 0 ? sum_per_reward : 0;
-            // uint32_t curr = (index + 1) % _gstate.max_record;
-            // sum_per_reward -= _perrewards.claim_records.at(curr).per_reward 
-            //                   * (owner->last_calc_time - _perrewards.claim_records.at(index).claim_time) 
-            //                   / (_perrewards.claim_records.at(curr).claim_time - _perrewards.claim_records.at(index).claim_time);
-
       }
 
       int64_t reward_stake = 0;
