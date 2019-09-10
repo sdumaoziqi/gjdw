@@ -65,18 +65,21 @@
 两次触发之间应有的奖励计算算法参考[文档](https://shimo.im/docs/Rco86YV7X8oQwhJp/read)
 
 ```
-   struct record{
-      int64_t per_reward;
-      time claim_time;
+
+// eosio_global_state.cur_point指向可以插入下一个快照的id。每次计算的最大长度由eosio_global_state中的max_record设置，当前为365。
+   struct goc_vote_reward_info {
+      uint64_t      reward_id = 0;
+      time          reward_time;
+      int64_t       rewards = 0;
+
+      uint64_t primary_key() const { return reward_id;}
+
+      EOSLIB_SERIALIZE( goc_vote_reward_info, (reward_id)(reward_time)(rewards) ) 
    };
 
-// 用vector实现的一个循环队列，cur_point指向队列可以插入下一个元素的位置。队列大小由eosio_global_state中的max_record设置，当前为366。
-   struct goc_per_reward_info { 
-      uint32_t      cur_point;   
-      std::vector<record>        claim_records;
+   typedef eosio::multi_index<N(perrewards), goc_per_reward_info>  per_rewards_table;
 
-      EOSLIB_SERIALIZE( goc_per_reward_info, (cur_point)(claim_records) )
-   };
+   per_rewards_table      _perrewards(_self, _self); // code("gocio") scope("gocio") table("perrewards")
 ```
 
 `goc_per_reward_info`每一次插入元素由`claimrewards()`触发，每次插入间隔至少为一天。累加claim_time大于上次计算时间且小于当前时间的per_reward，累加值乘上抵押资源就是奖励值。
