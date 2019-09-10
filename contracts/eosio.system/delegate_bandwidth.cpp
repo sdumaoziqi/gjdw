@@ -403,7 +403,7 @@ namespace eosiosystem {
 
       int64_t sum_per_reward = 0;
       uint64_t count = 0;
-      uint64_t index = _gstate.cur_point - 1;
+      uint64_t index = _gstate.cur_point ? _gstate.cur_point - 1 : 0;
 
       // calc reward
       if(owner->last_calc_time == 0) { //first time calc
