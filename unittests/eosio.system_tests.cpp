@@ -3061,111 +3061,66 @@ BOOST_FIXTURE_TEST_CASE(goc_vreward_test, eosio_system_tester, * boost::unit_tes
 
 
 
-   const auto     initial_global_state              = get_global_state();
-   const auto     initial_per_rewardd_info          = get_goc_per_reward_info();
    const auto     initial_vote_alice                = get_voter_info("alice1111111");
-
+   BOOST_REQUIRE_EQUAL(20000000000000, initial_vote_alice["staked"].as_uint64());
 
    const auto     initial_vreward_alice      = get_vote_rewards_info("alice1111111", 0);
    BOOST_REQUIRE_EQUAL(true, initial_vreward_alice.is_null());
 
+   const auto     initial_global_state      = get_global_state();
+   const uint64_t initial_cur_point        = initial_global_state["cur_point"].as_uint64();
+   BOOST_REQUIRE_EQUAL(0, initial_cur_point);
+
 
    produce_blocks( 1000 );
-   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera"))); // cur_point = 1
    produce_block( fc::days(1) );
-   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera"))); // cur_point = 2
+   produce_block( fc::days(2) );
+   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera"))); // cur_point = 3
 
-   auto     per_reward_info         = get_goc_per_reward_info();
-
-   int64_t sum_per_reward = 0;
-
-   struct record{
-      int64_t per_reward;
-      uint32_t claim_time;
-   };
-
-
-
-   vector<pair<int64_t, uint32_t>> records;
-
-   if( !per_reward_info.is_null()) {
-         records = per_reward_info["claim_records"].as<vector<pair<int64_t, uint32_t>>>();  // TODO: bug
-   }
-      
-
-//    for(int i = 0; i < records.size(); ++i) {
-//          if(records[i]["claim_time"] > initial_vote_alice["last_calc_time"])
-//          sum_per_reward += records[i]["per_reward"];
-//    }
-//    sum_per_reward += per_reward_info["data"]["claim_records"]["0"]["per_reward"];
-
-
-   BOOST_REQUIRE_EQUAL( 1, records.size() );
-
-
+   // stake trigger calc vrewards
    BOOST_REQUIRE_EQUAL(success(), stake("alice1111111", core_from_string("1.0000"), core_from_string("1.0000")));
 
 
+   auto     per_reward_info_1         = get_goc_per_reward_info(1);
+   auto     per_reward_info_2         = get_goc_per_reward_info(2);
 
 
-   BOOST_REQUIRE_EQUAL( 24, initial_global_state["max_shard"].as<uint32_t>() );
-   BOOST_REQUIRE_EQUAL( 0, initial_global_state["curr_index"].as<uint32_t>() );
-   // alice1111111 not yet vote, so the total_stake is 0
-   BOOST_REQUIRE_EQUAL( 0, initial_global_state["total_stake"].as<int64_t>() );
+   int64_t sum_per_reward = per_reward_info_1["per_reward"].as_int64() + per_reward_info_2["per_reward"].as_int64();
 
-   BOOST_REQUIRE_EQUAL(success(), vote( N(alice1111111), { N(defproducera) }));
-   produce_blocks(10);
-   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
-   
-   // produce_blocks(10);
-   auto     global_state      = get_global_state();
-   BOOST_REQUIRE_EQUAL( 24, global_state["max_shard"].as<uint32_t>() );
-   BOOST_REQUIRE_EQUAL( 1, global_state["curr_index"].as<uint32_t>() );
-   // alice1111111 voted, so the total_stake equal alice1111111's net_weight + cpu_weight
-   BOOST_REQUIRE_EQUAL( 20000000000000, global_state["total_stake"].as<int64_t>() );
+   const auto     vreward_alice_1      = get_vote_rewards_info("alice1111111", 0);
+   BOOST_REQUIRE_EQUAL(20000000000000L * sum_per_reward, vreward_alice_1["rewards"].as_int64());
 
-   uint32_t max_shard = global_state["max_shard"].as<uint32_t>();
-   produce_block( fc::seconds(24 * 3600 / max_shard + 1) );
-   for ( uint32_t i = 1; i < max_shard; ++i ) {
-      BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
-      produce_block( fc::seconds(24 * 3600 / max_shard + 1) );
-   }
-   global_state      = get_global_state();
-   BOOST_REQUIRE_EQUAL( 24, global_state["max_shard"].as<uint32_t>() );
-   BOOST_REQUIRE_EQUAL( 0, global_state["curr_index"].as<uint32_t>() );
 
-   auto vrewards = get_vote_rewards_info( N(alice1111111), (uint64_t)0 );
-   // rewards is 0, because in the frist cycle, "goc_voter_bucket" is 0
-   BOOST_REQUIRE_EQUAL( 0, vrewards["rewards"].as_uint64() );
+   produce_block( fc::days(1) );
+   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera"))); // cur_point = 4
 
-   uint64_t goc_voter_bucket = global_state["goc_voter_bucket"].as_uint64();
-   for ( uint32_t i = 0; i < max_shard; ++i ) {
-      BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
-      produce_block( fc::seconds(24 * 3600 / max_shard + 1) );
-      // claimrewards shard
-      if ( i < get_name_hash(N(claimrewards)) ) {
-         BOOST_REQUIRE_EQUAL( 0, vrewards["rewards"].as_uint64() );
-      } else {
-         BOOST_REQUIRE_EQUAL( ( goc_voter_bucket * 1'000'000'000 / 20000000000000 ) * 20000000000000, vrewards["rewards"].as_uint64() );
-      }
-   }
-   vrewards = get_vote_rewards_info( N(alice1111111), (uint64_t)0 );
-   BOOST_REQUIRE_EQUAL( ( goc_voter_bucket * 1'000'000'000 / 20000000000000 ) * 20000000000000, vrewards["rewards"].as_uint64() );
+   // unstake trigger calc vrewards
+   BOOST_REQUIRE_EQUAL(success(), unstake("alice1111111", core_from_string("1.0000"), core_from_string("1.0000")));
 
-   // test stability
-   global_state      = get_global_state();
-   uint64_t goc_voter_bucket_2 = global_state["goc_voter_bucket"].as_uint64();
-   for ( uint32_t i = 0; i < max_shard; ++i ) {
-      BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
-      produce_block( fc::seconds(24 * 3600 / max_shard + 1) );
-   }
-   auto vrewards_2 = get_vote_rewards_info( N(alice1111111), (uint64_t)0 );
-   BOOST_REQUIRE_EQUAL( ( goc_voter_bucket_2 * 1'000'000'000 / 20000000000000 ) * 20000000000000, vrewards_2["rewards"].as_uint64() - vrewards["rewards"].as_uint64() );
+   auto     per_reward_info_3         = get_goc_per_reward_info(3);
+
+   const auto     vreward_alice_2      = get_vote_rewards_info("alice1111111", 0);
+   BOOST_REQUIRE_EQUAL(20000000020000L * per_reward_info_3["per_reward"].as_int64(), vreward_alice_2["rewards"].as_int64() - vreward_alice_1["rewards"].as_int64());
+
+
+   produce_block( fc::days(3) );
+   BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera"))); // cur_point = 5
+
+   // calcvrewards trigger calc vrewards
+   BOOST_REQUIRE_EQUAL(success(), goc_calcvrewards("alice1111111"));
+
+   auto     per_reward_info_4         = get_goc_per_reward_info(4);
+
+   const auto     vreward_alice_3      = get_vote_rewards_info("alice1111111", 0);
+   BOOST_REQUIRE_EQUAL(20000000000000L * per_reward_info_4["per_reward"].as_int64(), vreward_alice_3["rewards"].as_int64() - vreward_alice_2["rewards"].as_int64());
+
 
 } FC_LOG_AND_RETHROW()
 
 
-BOOST_FIXTURE_TEST_CASE(goc_lockbw_unlockbw_test, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
+BOOST_FIXTURE_TEST_CASE(goc_lockbw_unlockbw_test, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try { //todo
 
    const double continuous_rate = 4.879 / 100.;
    const double usecs_per_year  = 52 * 7 * 24 * 3600 * 1000000ll;

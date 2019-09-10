@@ -292,6 +292,10 @@ public:
          return push_action( name(receiver), N(gocunstake), mvo()("receiver",receiver));
    }
 
+   action_result goc_calcvrewards( const account_name& owner) {
+         return push_action( name(owner), N(calcvrewards), mvo()("owner",owner));
+   }
+
    action_result goc_new_prop( const account_name& creater, 
                                const asset&        fee, 
                                const string&       pname,
@@ -445,6 +449,13 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "goc_vote_reward_info", data, abi_serializer_max_time );
    }
 
+   fc::variant get_goc_per_reward_info(const uint64_t id ) {
+      vector<char> data = get_row_by_id( config::system_account_name, config::system_account_name, N(perrewards), id );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "goc_per_reward_info", data, abi_serializer_max_time );
+
+   }
+
    fc::variant get_lockband_info( const uint64_t id ) {
       vector<char> data = get_row_by_id( config::system_account_name, config::system_account_name, N(lockband), id );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "locked_bandwidth_info", data, abi_serializer_max_time );
@@ -508,18 +519,6 @@ public:
       return 0;
    }
 
-   uint64_t get_name_hash(uint64_t name)
-   {
-      return (((name & 0xff00000000000000ull) >> 56)
-            + ((name & 0x00ff000000000000ull) >> 48)
-            + ((name & 0x0000ff0000000000ull) >> 40)
-            + ((name & 0x000000ff00000000ull) >> 32)
-            + ((name & 0x00000000ff000000ull) >> 24)
-            + ((name & 0x0000000000ff0000ull) >> 16)
-            + ((name & 0x000000000000ff00ull) >> 8)
-            + ((name & 0x00000000000000ffull) >> 0));
-   }
-
    int64_t calc_net_cpu_weight(asset net_quantity, asset cpu_quantity, uint8_t lock_type)
    {
       if (lock_type < 0 || lock_type > 4)
@@ -552,13 +551,6 @@ public:
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global), N(global) );
       if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state", data, abi_serializer_max_time );
-
-   }
-
-   fc::variant get_goc_per_reward_info() {
-      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rewardapi), N(rewardapi) );
-      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "goc_per_reward_info", data, abi_serializer_max_time );
 
    }
 
