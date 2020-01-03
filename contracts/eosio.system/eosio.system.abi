@@ -174,12 +174,12 @@
       "base": "",
       "fields": [
          {"name":"owner", "type":"account_name"},
-         {"name":"fee", "type":"asset"},
-         {"name":"pname", "type":"string"},
-         {"name":"pcontent", "type":"string"},
-         {"name":"url", "type":"string"},
-         {"name":"hash", "type":"string"},
-         {"name":"start_type", "type":"uint16"}
+         {"name":"btime", "type":"uint64"},
+         {"name":"etime", "type":"uint64"},
+         {"name":"eff_time", "type":"uint64"},
+         {"name":"price", "type":"uint64"},
+         {"name":"quota", "type":"uint64"},
+         {"name":"pcontent", "type":"string"}
       ]
     },{
       "name": "gocupprop",
@@ -207,7 +207,7 @@
       "fields": [
          {"name":"owner", "type":"account_name"},
          {"name":"id", "type":"uint64"},         
-         {"name":"vote", "type":"bool"}
+         {"name":"num", "type":"uint64"}
       ]
     },{
       "name": "gocbpvote",
@@ -466,6 +466,13 @@
         {"name":"reserved_account_name2",       "type":"account_name"},
         {"name":"work_reward",          "type":"asset"},
         {"name":"reserved_reward",      "type":"asset"},
+        {"name":"btime",                      "type":"uint64"},
+        {"name":"etime",                      "type":"uint64"},
+        {"name":"eff_time",                   "type":"uint64"},
+        {"name":"price",                      "type":"uint64"},
+        {"name":"require",                    "type":"uint64"},
+        {"name":"quota",                      "type":"uint64"},
+        {"name":"deposit",                    "type":"uint64"},
         {"name":"total_yeas",           "type":"float64"},
         {"name":"total_nays",           "type":"float64"},
         {"name":"total_voter",          "type":"uint64"},
@@ -477,7 +484,7 @@
       "base": "",
       "fields": [
         {"name":"owner",                "type":"account_name"},
-        {"name":"vote",                 "type":"bool"},
+        {"name":"num",                  "type":"uint64"},
         {"name":"vote_time",            "type":"time_point_sec"},
         {"name":"vote_update_time",     "type":"time_point_sec"}
       ]
@@ -496,7 +503,8 @@
         {"name":"reward_time",          "type":"time_point_sec"},
         {"name":"proposal_id",          "type":"uint64"},
         {"name":"rewards",              "type":"asset"},
-        {"name":"settle_time",          "type":"time_point_sec"}
+        {"name":"settle_time",          "type":"time_point_sec"},
+        {"name":"num",                  "type":"uint64"}
       ]
     },{
       "name": "gocreward",

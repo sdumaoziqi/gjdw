@@ -169,6 +169,15 @@ namespace eosiosystem {
       asset                 reserved_reward;
 
 
+      uint64_t              btime = 0;
+      uint64_t              etime = 0;
+      uint64_t              eff_time = 96;
+      uint64_t              price = 0;
+      uint64_t              require = 0;
+      uint64_t              quota = 0;
+      uint64_t              deposit = 0;
+
+
       double                total_yeas;
       double                total_nays;
       uint64_t              total_voter = 0;
@@ -186,6 +195,7 @@ namespace eosiosystem {
                             (create_time)(vote_starttime)(bp_vote_starttime)(bp_vote_endtime)
                             (settle_time)(reward)
                             (proposal_type)(reserved1)(reserved2)(reserved_time1)(reserved_time2)(reserved_account_name1)(reserved_account_name2)(work_reward)(reserved_reward)
+                            (btime)(etime)(eff_time)(price)(require)(quota)(deposit)
                             (total_yeas)(total_nays)(total_voter)
                             (bp_nays)(total_bp)
                             )
@@ -214,14 +224,14 @@ namespace eosiosystem {
 
    struct goc_vote_info {
      account_name           owner;
-     bool                   vote;
+     uint64_t               num;
      time                   vote_time;
      time                   vote_update_time;
      time                   settle_time = 0;
 
      uint64_t primary_key()const { return owner; }
 
-     EOSLIB_SERIALIZE(goc_vote_info, (owner)(vote)(vote_time)(vote_update_time)(settle_time))     
+     EOSLIB_SERIALIZE(goc_vote_info, (owner)(num)(vote_time)(vote_update_time)(settle_time))     
    };
 
    struct goc_vote_reward_info {
@@ -239,10 +249,11 @@ namespace eosiosystem {
       uint64_t      proposal_id;
       eosio::asset  rewards = asset(0);
       time          settle_time = 0;
+      uint64_t      num = 0;
 
       uint64_t  primary_key()const { return proposal_id; }
 
-      EOSLIB_SERIALIZE( goc_reward_info, (reward_time)(proposal_id)(rewards)(settle_time) )
+      EOSLIB_SERIALIZE( goc_reward_info, (reward_time)(proposal_id)(rewards)(settle_time)(num) )
    };
 
    typedef eosio::multi_index< N(voters), voter_info>  voters_table;
@@ -359,11 +370,11 @@ namespace eosiosystem {
          void gocstake( account_name payer);
          void gocunstake( account_name receiver);
         // start_type: 0:normal, 1:skip waiting, 2:skip user vote, only for debug
-         void gocnewprop( const account_name owner, asset fee, const std::string& pname, const std::string& pcontent, const std::string& url, const std::string& hash, uint16_t start_type);
+         void gocnewprop(const account_name owner, uint64_t btime, uint64_t etime, uint64_t eff_time, uint64_t price, uint64_t quota, const std::string &pcontent);
          void gocupprop( const account_name owner, uint64_t id, const std::string& pname, const std::string& pcontent, const std::string& url, const std::string& hash);
          void gocsetpstage(const account_name owner, uint64_t id, uint16_t stage, time start_time);
 
-         void gocvote( account_name voter, uint64_t id, bool yea );
+         void gocvote( account_name voter, uint64_t id, uint64_t num );
          void gocbpvote( account_name bp, uint64_t id, bool yea );
 
          

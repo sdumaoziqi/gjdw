@@ -1380,36 +1380,34 @@ struct unstake_governance_subcommand {
 
 struct create_governance_proposal_subcommand {
     string owner_str;
-    string fee;
-    string name;
+    uint64_t btime;
+    uint64_t etime;
+    uint64_t eff_time;
+    uint64_t price;
+    uint16_t quota=0;
     string content;
-    string url;
-    string hash;
-    uint16_t start_type=0;
 
 
     create_governance_proposal_subcommand(CLI::App* actionRoot) {
         auto create_proposal = actionRoot->add_subcommand("createproposal", localized("Create governance proposal"));
-        create_proposal->add_option("owner", owner_str, localized("The owner of created proposal"))->required();
-        create_proposal->add_option("fee", fee, localized("The amount of GOC for create proposal"))->required();
-        create_proposal->add_option("name", name, localized("The name of created proposal"))->required();
-        create_proposal->add_option("content", content, localized("The content of created proposal"))->required();
-        create_proposal->add_option("url", url, localized("The url of created proposal"))->required();
-        create_proposal->add_option("hash", hash, localized("The hash of updating proposal"))->required();
-        create_proposal->add_option("--start-type", start_type, localized("Set start type, 1 for start vote, 2 for start bp vote(DEBUG)"));
+        create_proposal->add_option("owner", owner_str, localized("The owner of order"))->required();
+        create_proposal->add_option("btime", btime, localized("The btime of order"))->required();
+        create_proposal->add_option("etime", etime, localized("The etime of order"))->required();
+        create_proposal->add_option("eff_time", eff_time, localized("The eff_time of order"))->required();
+        create_proposal->add_option("price", price, localized("The price of order"))->required();
+        create_proposal->add_option("quota", quota, localized("The quota of order"))->required();
+        create_proposal->add_option("content", content, localized("The content of order"))->required();
         add_standard_transaction_options(create_proposal);
-        // only allow 0,1,2 here
-        if( start_type > 2)
-            start_type = 0;
+
         create_proposal->set_callback([this] {
             fc::variant act_payload = fc::mutable_variant_object()
                ("owner", owner_str)
-               ("fee", to_asset(fee))
-               ("pname", name)
-               ("pcontent", content)
-               ("url", url)
-               ("hash", hash)
-               ("start_type", start_type);
+               ("btime", btime)
+               ("etime", etime)
+               ("eff_time", eff_time)
+               ("price", price)
+               ("quota", quota)
+               ("pcontent", content);
             send_actions({create_action({permission_level{owner_str,config::active_name}}, config::system_account_name, N(gocnewprop), act_payload)});
          });
 
@@ -1477,7 +1475,7 @@ struct set_governance_proposal_stage_subcommand {
 struct vote_governance_proposal_subcommand {
     string owner_str;
     string id;
-    string vote;
+    uint64_t num;
 
     bool bp = false;
 
@@ -1485,14 +1483,13 @@ struct vote_governance_proposal_subcommand {
         auto vote_proposal = actionRoot->add_subcommand("voteproposal", localized("Vote governance proposal"));
         vote_proposal->add_option("owner", owner_str, localized("The voting user"))->required();
         vote_proposal->add_option("id", id, localized("The id of voting proposal"))->required();
-        vote_proposal->add_option("vote", vote, localized("Vote of voting proposal"))->required();
-        vote_proposal->add_flag("--bpvote", bp, localized("vote as bp"));
+        vote_proposal->add_option("num", num, localized("Vote of voting proposal"))->required();
         add_standard_transaction_options(vote_proposal);
         vote_proposal->set_callback([this] {
             fc::variant act_payload = fc::mutable_variant_object()
                ("owner", owner_str)
                ("id", id)
-               ("vote", vote);
+               ("num", num);
             if(bp)
                 send_actions({create_action({permission_level{owner_str,config::active_name}}, config::system_account_name, N(gocbpvote), act_payload)});
             else
